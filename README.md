@@ -7,6 +7,7 @@ Google TasksをChatGPT Custom GPT Actionsから安全に操作するための、
 ## できること
 
 - 今日・明日の未完了Google Tasksを取得する
+- Web AppとCustom GPT Actionsの疎通を確認する
 - 明示されたタスクだけ新規作成する
 - 明示されたタスクだけ期限変更する
 - 監査用JSONを返す
@@ -26,6 +27,7 @@ Google TasksをChatGPT Custom GPT Actionsから安全に操作するための、
 ```text
 apps-script/Code.gs
 apps-script/appsscript.json
+openapi/google-tasks-action-v2.yaml
 openapi/google-tasks-action.yaml
 docs/security-policy.md
 README.md
@@ -69,19 +71,35 @@ KANROJI_TASKLIST_ID=@default
 1. Apps Script右上の「デプロイ」から「新しいデプロイ」を選択
 2. 種類は「ウェブアプリ」
 3. 次のユーザーとして実行：自分
-4. アクセスできるユーザー：自分、または必要に応じてアクセス可能な範囲
-5. デプロイURLを取得する
-6. `openapi/google-tasks-action.yaml` の `servers.url` をデプロイURLへ差し替える
+4. アクセスできるユーザー：**全員（匿名ユーザーを含む）**
+5. 認可を完了し、末尾が `/exec` のウェブアプリURLを取得する
+6. `openapi/google-tasks-action-v2.yaml` の `servers.url` をデプロイURLへ差し替える
+7. `Code.gs` を変更した後は「デプロイを管理」から同じデプロイを編集し、バージョンを「新バージョン」にして再デプロイする
+
+Custom GPT Actionsから直接呼ぶ場合、OpenAI側はあなたのGoogleアカウントとしてログインできません。そのため「アクセスできるユーザー」が「自分」や組織内だけだと、ブラウザでは見えてもActionからは失敗します。
+
+URLはApps ScriptエディタのブラウザURLではなく、デプロイ画面に表示されるウェブアプリURLを使います。`/u/0/`、`/u/1/`、`/edit`、`/dev` を含むURLはCustom GPT Actions用に使わないでください。
 
 ## Custom GPT Action 設定
 
 1. Custom GPTのActions設定を開く
-2. `openapi/google-tasks-action.yaml` を貼り付ける
+2. `openapi/google-tasks-action-v2.yaml` を貼り付ける
 3. `servers.url` をApps Script Web AppのURLに差し替える
 4. 認証はMVPではOpenAPI側ではなく、リクエストbodyの `secret` で行う
 5. GPTの指示文側に、必要時のみ `secret` を渡す運用を設定する
 
 ## テスト用payload
+
+### health_check
+
+Google Tasks APIを呼ばずに、Web Appとsecretの疎通だけを確認します。
+
+```json
+{
+  "secret": "YOUR_SECRET",
+  "action": "health_check"
+}
+```
 
 ### list_today_tomorrow
 
@@ -143,9 +161,66 @@ KANROJI_TASKLIST_ID=@default
 ```json
 {
   "ok": false,
-  "error": "unauthorized"
+  "error": "unauthorized",
+  "reason": "invalid_secret"
 }
 ```
+
+## 接続トラブルシュート
+
+現在のWeb App URLを直接開いてGoogle Drive風の「現在、ファイルを開くことができません。アドレスを確認してからもう一度お試しください。」という画面になる場合、`doGet()` まで到達していない可能性が高いです。コード内のGoogle Tasks API処理ではなく、Web AppのデプロイURL、公開範囲、またはデプロイ版の問題として切り分けます。
+
+### 1. GETでWeb Appに到達できるか確認
+
+シークレットウィンドウまたはログアウト状態のブラウザで、デプロイURLをそのまま開きます。OpenAPIの `healthCheck` と同じ経路も確認したい場合は、末尾に `/health` を付けたURLも開きます。
+
+```text
+https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+```
+
+期待結果はJSONです。
+
+```json
+{
+  "ok": true,
+  "service": "kanroji-google-tasks-bridge",
+  "status": "ready"
+}
+```
+
+JSONではなくGoogleのエラーページが出る場合は、以下を確認します。
+
+- デプロイ種別が「ウェブアプリ」になっている
+- 「次のユーザーとして実行」が「自分」になっている
+- 「アクセスできるユーザー」が「全員（匿名ユーザーを含む）」になっている
+- Apps ScriptエディタやGoogle DriveのURLではなく、デプロイ画面のウェブアプリURLを使っている
+- URLが `/exec` で終わっており、`/u/0/`、`/u/1/`、`/edit`、`/dev` を含んでいない
+- `Code.gs` 変更後に、新しいバージョンとして再デプロイしている
+
+### 2. POSTのhealth_checkを確認
+
+GETがJSONを返すようになったら、ターミナルでPOST疎通を確認します。
+
+```bash
+curl -L -X POST "YOUR_WEB_APP_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"YOUR_SECRET","action":"health_check"}'
+```
+
+`ok: true` が返れば、Custom GPT Actionsから呼ぶためのWeb App URLとsecretの基本疎通はできています。`unauthorized` の場合、`reason` が `server_secret_not_configured` ならScript Property未設定、`invalid_secret` ならGPT側またはcurl側のsecret違いです。
+
+### 3. Google Tasks APIの到達を確認
+
+`health_check` は成功するのに `list_today_tomorrow` が失敗する場合は、Web App自体ではなくGoogle Tasks APIまわりを確認します。
+
+- Apps Scriptの「サービス」に `Google Tasks API` が追加され、識別子が `Tasks` になっている
+- Google Cloud側でTasks APIが有効になっている
+- 初回実行時の承認が完了している
+- `KANROJI_TASKLIST_ID` を設定している場合、そのタスクリストIDが正しい
+
+### 4. Custom GPT ActionがApps Scriptに届いているか確認
+
+Custom GPTからActionを実行した直後に、Apps Scriptエディタ左側の「実行数」を開きます。`doPost` の実行履歴が出ていれば、ActionはApps Scriptまで届いています。履歴が出ない場合は、OpenAPIの `servers.url`、Web App公開範囲、またはURLの種類が原因です。
 
 ## Google Tasksのdue日付仕様
 
