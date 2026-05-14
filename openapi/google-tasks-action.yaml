@@ -1,0 +1,160 @@
+openapi: 3.1.0
+info:
+  title: Kanroji Google Tasks Bridge
+  version: 0.1.0
+  description: Personal-use MVP bridge for operating Google Tasks through Google Apps Script.
+servers:
+  - url: https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
+paths:
+  /:
+    post:
+      operationId: googleTasksBridge
+      summary: Execute a Google Tasks bridge action
+      description: Use action field to call list_today_tomorrow, create_task, update_due, or audit_snapshot.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ListTodayTomorrowRequest'
+                - $ref: '#/components/schemas/CreateTaskRequest'
+                - $ref: '#/components/schemas/UpdateDueRequest'
+                - $ref: '#/components/schemas/AuditSnapshotRequest'
+      responses:
+        '200':
+          description: JSON response from Apps Script bridge
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+components:
+  schemas:
+    Secret:
+      type: string
+      description: Secret stored in Apps Script Script Properties as KANROJI_TASKS_SECRET.
+    ListTodayTomorrowRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - secret
+        - action
+      properties:
+        secret:
+          $ref: '#/components/schemas/Secret'
+        action:
+          type: string
+          enum:
+            - list_today_tomorrow
+    CreateTaskRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - secret
+        - action
+        - title
+        - due
+      properties:
+        secret:
+          $ref: '#/components/schemas/Secret'
+        action:
+          type: string
+          enum:
+            - create_task
+        title:
+          type: string
+          description: Task title. Must use the format 邸名｜行動.
+          examples:
+            - 山田邸｜業者見積依頼
+        due:
+          type: string
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+          description: Due date in YYYY-MM-DD format.
+          examples:
+            - '2026-05-14'
+        notes:
+          type: string
+          description: Optional task notes.
+    UpdateDueRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - secret
+        - action
+        - taskId
+        - due
+      properties:
+        secret:
+          $ref: '#/components/schemas/Secret'
+        action:
+          type: string
+          enum:
+            - update_due
+        taskId:
+          type: string
+          description: Google Tasks task ID.
+        due:
+          type: string
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+          description: New due date in YYYY-MM-DD format.
+          examples:
+            - '2026-05-15'
+    AuditSnapshotRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - secret
+        - action
+      properties:
+        secret:
+          $ref: '#/components/schemas/Secret'
+        action:
+          type: string
+          enum:
+            - audit_snapshot
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        notes:
+          type: string
+        due:
+          type: string
+        status:
+          type: string
+        updated:
+          type: string
+    BridgeResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+        message:
+          type: string
+        timezone:
+          type: string
+        generatedAt:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        task:
+          $ref: '#/components/schemas/Task'
+        todayTomorrow:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        datelessCandidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        warnings:
+          type: array
+          items:
+            type: string
