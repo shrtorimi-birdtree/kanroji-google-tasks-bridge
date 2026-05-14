@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Kanroji Google Tasks Bridge
-  version: 0.1.0
+  version: 0.1.1
   description: Personal-use MVP bridge for operating Google Tasks through Google Apps Script.
 servers:
   - url: https://script.google.com/macros/s/AKfycbzwvxsV6KmS68Ntdsn3C4bserFCU1pFZPzICpSXabwX0UTE5B00LHTpzdTaWb-DqUxn/exec
@@ -10,17 +10,13 @@ paths:
     post:
       operationId: googleTasksBridge
       summary: Execute a Google Tasks bridge action
-      description: Use action field to call list_today_tomorrow, create_task, update_due, or audit_snapshot.
+      description: Execute one of list_today_tomorrow, create_task, update_due, or audit_snapshot. For create_task, title and due are required. For update_due, taskId and due are required.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              oneOf:
-                - $ref: '#/components/schemas/ListTodayTomorrowRequest'
-                - $ref: '#/components/schemas/CreateTaskRequest'
-                - $ref: '#/components/schemas/UpdateDueRequest'
-                - $ref: '#/components/schemas/AuditSnapshotRequest'
+              $ref: '#/components/schemas/GoogleTasksBridgeRequest'
       responses:
         '200':
           description: JSON response from Apps Script bridge
@@ -30,10 +26,7 @@ paths:
                 $ref: '#/components/schemas/BridgeResponse'
 components:
   schemas:
-    Secret:
-      type: string
-      description: Secret stored in Apps Script Script Properties as KANROJI_TASKS_SECRET.
-    ListTodayTomorrowRequest:
+    GoogleTasksBridgeRequest:
       type: object
       additionalProperties: false
       required:
@@ -41,77 +34,33 @@ components:
         - action
       properties:
         secret:
-          $ref: '#/components/schemas/Secret'
+          type: string
+          description: Secret stored in Apps Script Script Properties as KANROJI_TASKS_SECRET.
         action:
           type: string
+          description: Action to execute.
           enum:
             - list_today_tomorrow
-    CreateTaskRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - secret
-        - action
-        - title
-        - due
-      properties:
-        secret:
-          $ref: '#/components/schemas/Secret'
-        action:
-          type: string
-          enum:
             - create_task
+            - update_due
+            - audit_snapshot
         title:
           type: string
-          description: Task title. Must use the format 邸名｜行動.
+          description: Required only for create_task. Task title must use the format 邸名｜行動.
           examples:
             - 山田邸｜業者見積依頼
         due:
           type: string
+          description: Required for create_task and update_due. Due date in YYYY-MM-DD format.
           pattern: '^\\d{4}-\\d{2}-\\d{2}$'
-          description: Due date in YYYY-MM-DD format.
           examples:
             - '2026-05-14'
         notes:
           type: string
-          description: Optional task notes.
-    UpdateDueRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - secret
-        - action
-        - taskId
-        - due
-      properties:
-        secret:
-          $ref: '#/components/schemas/Secret'
-        action:
-          type: string
-          enum:
-            - update_due
+          description: Optional notes for create_task.
         taskId:
           type: string
-          description: Google Tasks task ID.
-        due:
-          type: string
-          pattern: '^\\d{4}-\\d{2}-\\d{2}$'
-          description: New due date in YYYY-MM-DD format.
-          examples:
-            - '2026-05-15'
-    AuditSnapshotRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - secret
-        - action
-      properties:
-        secret:
-          $ref: '#/components/schemas/Secret'
-        action:
-          type: string
-          enum:
-            - audit_snapshot
+          description: Required only for update_due. Google Tasks task ID.
     Task:
       type: object
       properties:
@@ -139,6 +88,10 @@ components:
         timezone:
           type: string
         generatedAt:
+          type: string
+        dueMin:
+          type: string
+        dueMax:
           type: string
         tasks:
           type: array
