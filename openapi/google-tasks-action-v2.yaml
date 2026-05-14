@@ -1,7 +1,7 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Kanroji Google Tasks Bridge
-  version: 0.2.0
+  version: 0.2.1
   description: Personal-use MVP bridge for Google Tasks through Google Apps Script.
 servers:
   - url: https://script.google.com/macros/s/AKfycbzwvxsV6KmS68Ntdsn3C4bserFCU1pFZPzICpSXabwX0UTE5B00LHTpzdTaWb-DqUxn/exec
@@ -27,12 +27,12 @@ paths:
                   description: Secret stored in Apps Script Script Properties as KANROJI_TASKS_SECRET.
                 action:
                   type: string
+                  description: Action to execute.
                   enum:
                     - list_today_tomorrow
                     - create_task
                     - update_due
                     - audit_snapshot
-                  description: Action to execute.
                 title:
                   type: string
                   description: Required for create_task. Must use format 邸名｜行動.
@@ -55,3 +55,46 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the operation succeeded.
+                  error:
+                    type: string
+                    description: Error code when ok is false.
+                  message:
+                    type: string
+                    description: Optional message.
+                  timezone:
+                    type: string
+                    description: Timezone used by the bridge.
+                  generatedAt:
+                    type: string
+                    description: Generation timestamp.
+                  tasks:
+                    type: array
+                    description: Task list for list_today_tomorrow.
+                    items:
+                      type: object
+                      additionalProperties: true
+                  task:
+                    type: object
+                    description: Created or updated task.
+                    additionalProperties: true
+                  todayTomorrow:
+                    type: array
+                    description: Today and tomorrow tasks for audit_snapshot.
+                    items:
+                      type: object
+                      additionalProperties: true
+                  datelessCandidates:
+                    type: array
+                    description: Dateless task candidates for audit_snapshot.
+                    items:
+                      type: object
+                      additionalProperties: true
+                  warnings:
+                    type: array
+                    description: Warnings from audit_snapshot.
+                    items:
+                      type: string
