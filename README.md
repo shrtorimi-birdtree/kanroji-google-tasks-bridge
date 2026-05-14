@@ -214,7 +214,25 @@ curl -L "YOUR_WEB_APP_URL" \
 
 Apps Script Web Appは、`/exec/` や `/exec/health` のような追加パスでGoogleのエラーページを返す場合があります。Custom GPT Actions側では、OpenAPIの `servers.url` に `/exec` を含めず、`paths` の `/exec` と組み合わせて呼び出します。
 
-### 3. Google Tasks APIの到達を確認
+### 3. HTTP 302とCustom GPT Actionの切り分け
+
+Apps Scriptの `ContentService` は、JSONを返すときに `script.google.com` から `script.googleusercontent.com` の一時URLへHTTP 302リダイレクトします。これはApps Scriptの仕様です。
+
+`curl -L` のようにリダイレクトを追えるHTTPクライアントでは成功しても、Custom GPT Actions側で結果を受け取れず「思考中」のまま止まる場合があります。その場合は、Apps Scriptの処理やsecretではなく、GPT ActionsがApps Scriptのリダイレクト応答を処理できていない可能性を疑います。
+
+リダイレクト有無の確認例：
+
+```bash
+curl -i "YOUR_WEB_APP_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"YOUR_SECRET","action":"health_check"}'
+```
+
+`HTTP 302` と `Moved Temporarily` が返り、`curl -L` では `{"ok":true,...}` が返るなら、Web App自体は動作しています。
+
+`HtmlService` に切り替えるとHTTP 200にはできますが、Apps ScriptのHTMLラッパーが返り、純粋なJSON APIレスポンスではなくなります。このBridgeでは採用しません。Custom GPT Actionsでリダイレクトが原因と見られる停止が続く場合は、Cloudflare WorkersなどのAPIゲートウェイを前段に置き、ゲートウェイ側でApps Scriptのリダイレクトを追ってJSONだけを返す構成にしてください。
+
+### 4. Google Tasks APIの到達を確認
 
 `health_check` は成功するのに `list_today_tomorrow` が失敗する場合は、Web App自体ではなくGoogle Tasks APIまわりを確認します。
 
@@ -223,7 +241,7 @@ Apps Script Web Appは、`/exec/` や `/exec/health` のような追加パスで
 - 初回実行時の承認が完了している
 - `KANROJI_TASKLIST_ID` を設定している場合、そのタスクリストIDが正しい
 
-### 4. Custom GPT ActionがApps Scriptに届いているか確認
+### 5. Custom GPT ActionがApps Scriptに届いているか確認
 
 Custom GPTからActionを実行した直後に、Apps Scriptエディタ左側の「実行数」を開きます。`doPost` の実行履歴が出ていれば、ActionはApps Scriptまで届いています。履歴が出ない場合は、OpenAPIの `servers.url`、Web App公開範囲、またはURLの種類が原因です。
 
