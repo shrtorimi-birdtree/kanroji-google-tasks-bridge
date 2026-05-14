@@ -1,0 +1,57 @@
+openapi: 3.0.3
+info:
+  title: Kanroji Google Tasks Bridge
+  version: 0.2.0
+  description: Personal-use MVP bridge for Google Tasks through Google Apps Script.
+servers:
+  - url: https://script.google.com/macros/s/AKfycbzwvxsV6KmS68Ntdsn3C4bserFCU1pFZPzICpSXabwX0UTE5B00LHTpzdTaWb-DqUxn/exec
+paths:
+  /:
+    post:
+      operationId: googleTasksBridge
+      summary: Execute Google Tasks bridge action
+      description: Execute list_today_tomorrow, create_task, update_due, or audit_snapshot.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - secret
+                - action
+              properties:
+                secret:
+                  type: string
+                  description: Secret stored in Apps Script Script Properties as KANROJI_TASKS_SECRET.
+                action:
+                  type: string
+                  enum:
+                    - list_today_tomorrow
+                    - create_task
+                    - update_due
+                    - audit_snapshot
+                  description: Action to execute.
+                title:
+                  type: string
+                  description: Required for create_task. Must use format 邸名｜行動.
+                  example: 山田邸｜業者見積依頼
+                due:
+                  type: string
+                  description: Required for create_task and update_due. Format YYYY-MM-DD.
+                  example: '2026-05-14'
+                notes:
+                  type: string
+                  description: Optional notes for create_task.
+                taskId:
+                  type: string
+                  description: Required for update_due.
+      responses:
+        '200':
+          description: JSON response from Apps Script bridge
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
