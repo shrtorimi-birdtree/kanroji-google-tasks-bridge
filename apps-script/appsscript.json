@@ -1,0 +1,18 @@
+{
+  "timeZone": "Asia/Tokyo",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Tasks",
+        "version": "v1",
+        "serviceId": "tasks"
+      }
+    ]
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/tasks",
+    "https://www.googleapis.com/auth/script.external_request"
+  ]
+}
