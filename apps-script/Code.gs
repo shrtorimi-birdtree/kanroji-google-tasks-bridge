@@ -2,6 +2,8 @@ const TIMEZONE = 'Asia/Tokyo';
 const DEFAULT_TASKLIST_ID = '@default';
 const SECRET_PROPERTY_NAME = 'KANROJI_TASKS_SECRET';
 const TASKLIST_PROPERTY_NAME = 'KANROJI_TASKLIST_ID';
+const SERVICE_NAME = 'kanroji-google-tasks-bridge';
+const BRIDGE_VERSION = '0.2.2';
 
 function doPost(e) {
   try {
@@ -9,10 +11,12 @@ function doPost(e) {
     const auth = validateSecret_(body.secret);
 
     if (!auth.ok) {
-      return json_({ ok: false, error: 'unauthorized' });
+      return json_(unauthorized_(auth));
     }
 
     switch (body.action) {
+      case 'health_check':
+        return json_(healthCheck_('POST', e));
       case 'list_today_tomorrow':
         return json_(listTodayTomorrow_());
       case 'create_task':
@@ -22,15 +26,19 @@ function doPost(e) {
       case 'audit_snapshot':
         return json_(auditSnapshot_());
       default:
-        return json_({ ok: false, error: 'unknown_action' });
+        return json_({
+          ok: false,
+          error: 'unknown_action',
+          message: 'Supported actions: health_check, list_today_tomorrow, create_task, update_due, audit_snapshot.'
+        });
     }
   } catch (error) {
     return json_({ ok: false, error: String(error && error.message ? error.message : error) });
   }
 }
 
-function doGet() {
-  return json_({ ok: true, service: 'kanroji-google-tasks-bridge', status: 'ready' });
+function doGet(e) {
+  return json_(healthCheck_('GET', e));
 }
 
 function parseBody_(e) {
@@ -52,6 +60,34 @@ function validateSecret_(providedSecret) {
   }
 
   return { ok: true };
+}
+
+function unauthorized_(auth) {
+  return {
+    ok: false,
+    service: SERVICE_NAME,
+    version: BRIDGE_VERSION,
+    error: 'unauthorized',
+    reason: auth.reason || 'invalid_secret'
+  };
+}
+
+function healthCheck_(method, e) {
+  return {
+    ok: true,
+    service: SERVICE_NAME,
+    version: BRIDGE_VERSION,
+    status: 'ready',
+    method: method,
+    pathInfo: getPathInfo_(e),
+    timezone: TIMEZONE,
+    generatedAt: nowJst_(),
+    deploymentHint: 'Open the Web App URL in an incognito browser. If JSON is not shown, check the Web App URL, access setting, and deployed version.'
+  };
+}
+
+function getPathInfo_(e) {
+  return e && e.pathInfo ? String(e.pathInfo) : '';
 }
 
 function getTaskListId_() {

@@ -1,16 +1,45 @@
 openapi: 3.1.0
 info:
   title: Kanroji Google Tasks Bridge
-  version: 0.2.1
+  version: 0.2.2
   description: Personal-use MVP bridge for Google Tasks through Google Apps Script.
 servers:
   - url: https://script.google.com/macros/s/AKfycbzwvxsV6KmS68Ntdsn3C4bserFCU1pFZPzICpSXabwX0UTE5B00LHTpzdTaWb-DqUxn/exec
 paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Check whether the Apps Script Web App is reachable
+      description: Returns a JSON health response without calling the Google Tasks API.
+      responses:
+        '200':
+          description: JSON health response from Apps Script bridge
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the Web App endpoint is reachable.
+                  service:
+                    type: string
+                    description: Service identifier.
+                  version:
+                    type: string
+                    description: Bridge version deployed in Apps Script.
+                  status:
+                    type: string
+                    description: Health status.
+                  deploymentHint:
+                    type: string
+                    description: Manual deployment check hint.
   /:
     post:
       operationId: googleTasksBridge
       summary: Execute Google Tasks bridge action
-      description: Execute list_today_tomorrow, create_task, update_due, or audit_snapshot.
+      description: Execute health_check, list_today_tomorrow, create_task, update_due, or audit_snapshot. health_check does not call the Google Tasks API.
       requestBody:
         required: true
         content:
@@ -29,6 +58,7 @@ paths:
                   type: string
                   description: Action to execute.
                   enum:
+                    - health_check
                     - list_today_tomorrow
                     - create_task
                     - update_due
@@ -62,9 +92,24 @@ paths:
                   error:
                     type: string
                     description: Error code when ok is false.
+                  reason:
+                    type: string
+                    description: More specific failure reason when available.
                   message:
                     type: string
                     description: Optional message.
+                  service:
+                    type: string
+                    description: Service identifier for health and error responses.
+                  version:
+                    type: string
+                    description: Bridge version deployed in Apps Script.
+                  status:
+                    type: string
+                    description: Health status for health_check.
+                  deploymentHint:
+                    type: string
+                    description: Manual deployment check hint for health_check.
                   timezone:
                     type: string
                     description: Timezone used by the bridge.
