@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: Personal-use MVP bridge for operating Google Tasks through Google Apps Script.
 servers:
-  - url: https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
+  - url: https://script.google.com/macros/s/AKfycbzwvxsV6KmS68Ntdsn3C4bserFCU1pFZPzICpSXabwX0UTE5B00LHTpzdTaWb-DqUxn/exec
 paths:
   /:
     post:
