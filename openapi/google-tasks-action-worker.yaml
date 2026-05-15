@@ -1,0 +1,147 @@
+openapi: 3.1.0
+info:
+  title: Kanroji Google Tasks Bridge Worker Proxy
+  version: 0.3.0
+  description: Custom GPT Actions schema for calling the Cloudflare Worker proxy. The Worker forwards requests to the Apps Script /exec Web App, follows Apps Script redirects, and returns only 200 application/json responses.
+servers:
+  - url: https://kanroji-google-tasks-bridge.shrtorimi.workers.dev
+paths:
+  /exec:
+    get:
+      operationId: healthCheck
+      summary: Check whether the Worker and Apps Script Web App are reachable
+      description: Proxies a GET request to the Apps Script Web App /exec endpoint and returns the JSON health response.
+      responses:
+        '200':
+          description: JSON health response from the Worker proxy
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the endpoint is reachable.
+                  service:
+                    type: string
+                    description: Service identifier.
+                  version:
+                    type: string
+                    description: Bridge version deployed in Apps Script.
+                  status:
+                    type: string
+                    description: Health status.
+                  error:
+                    type: string
+                    description: Error code when ok is false.
+                  message:
+                    type: string
+                    description: Optional message.
+    post:
+      operationId: googleTasksBridge
+      summary: Execute Google Tasks bridge action through the Worker proxy
+      description: Execute health_check, list_today_tomorrow, create_task, update_due, or audit_snapshot. The Worker only proxies the request to Apps Script and does not add Google Tasks operations.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - secret
+                - action
+              properties:
+                secret:
+                  type: string
+                  description: Secret stored in Apps Script Script Properties as KANROJI_TASKS_SECRET.
+                action:
+                  type: string
+                  description: Action to execute.
+                  enum:
+                    - health_check
+                    - list_today_tomorrow
+                    - create_task
+                    - update_due
+                    - audit_snapshot
+                title:
+                  type: string
+                  description: Required for create_task. Must use format 邸名｜行動.
+                  example: 山田邸｜業者見積依頼
+                due:
+                  type: string
+                  description: Required for create_task and update_due. Format YYYY-MM-DD.
+                  example: '2026-05-15'
+                notes:
+                  type: string
+                  description: Optional notes for create_task.
+                taskId:
+                  type: string
+                  description: Required for update_due.
+      responses:
+        '200':
+          description: JSON response from the Worker proxy
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the operation succeeded.
+                  error:
+                    type: string
+                    description: Error code when ok is false.
+                  reason:
+                    type: string
+                    description: More specific failure reason when available.
+                  message:
+                    type: string
+                    description: Optional message.
+                  service:
+                    type: string
+                    description: Service identifier for health and error responses.
+                  version:
+                    type: string
+                    description: Bridge version deployed in Apps Script.
+                  status:
+                    type: string
+                    description: Health status for health_check.
+                  deploymentHint:
+                    type: string
+                    description: Manual deployment check hint for health_check.
+                  timezone:
+                    type: string
+                    description: Timezone used by the bridge.
+                  generatedAt:
+                    type: string
+                    description: Generation timestamp.
+                  tasks:
+                    type: array
+                    description: Task list for list_today_tomorrow.
+                    items:
+                      type: object
+                      additionalProperties: true
+                  task:
+                    type: object
+                    description: Created or updated task.
+                    additionalProperties: true
+                  todayTomorrow:
+                    type: array
+                    description: Today and tomorrow tasks for audit_snapshot.
+                    items:
+                      type: object
+                      additionalProperties: true
+                  datelessCandidates:
+                    type: array
+                    description: Dateless task candidates for audit_snapshot.
+                    items:
+                      type: object
+                      additionalProperties: true
+                  warnings:
+                    type: array
+                    description: Warnings from audit_snapshot.
+                    items:
+                      type: string
