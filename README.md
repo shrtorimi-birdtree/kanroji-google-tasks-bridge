@@ -107,10 +107,16 @@ WorkerはGoogle Tasksの業務ロジックを持ちません。`health_check`、
 
 Worker用OpenAPIでも `paths` 側に `/exec` を定義しています。そのためWorker URLが `https://example.workers.dev` の場合、`servers.url` は `https://example.workers.dev` のままにし、末尾に `/exec` を付けません。
 
+このリポジトリの検証済みWorker URLは以下です。
+
+```text
+https://kanroji-google-tasks-bridge.shrtorimi.workers.dev
+```
+
 Workerの疎通確認例：
 
 ```bash
-curl -i "https://your-worker-subdomain.workers.dev/exec" \
+curl -i "https://kanroji-google-tasks-bridge.shrtorimi.workers.dev/exec" \
   -H "Content-Type: application/json" \
   -d '{"secret":"YOUR_SECRET","action":"health_check"}'
 ```
