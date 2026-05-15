@@ -4,7 +4,7 @@ info:
   version: 0.3.0
   description: Custom GPT Actions schema for calling the Cloudflare Worker proxy. The Worker forwards requests to the Apps Script /exec Web App, follows Apps Script redirects, and returns only 200 application/json responses.
 servers:
-  - url: https://your-worker-subdomain.workers.dev
+  - url: https://kanroji-google-tasks-bridge.shrtorimi.workers.dev
 paths:
   /exec:
     get:
